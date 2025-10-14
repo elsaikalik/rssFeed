@@ -1,0 +1,18 @@
+name: Sync RSS from OneDrive
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download RSS from OneDrive
+        run: |
+          curl -L "https://086gc-my.sharepoint.com/:u:/g/personal/kevin_el-saikali_dfo-mpo_gc_ca/EdrDgLtiBzZNrRKrFNqSp1ABtD72_RVrStgWvBGBOJvDUQ?e=7LPB4L" -o newsfeed.xml
+      - name: Commit and Push
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add rss.xml
+          git commit -m "Sync RSS from OneDrive"
+          git push
