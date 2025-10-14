@@ -13,6 +13,6 @@ jobs:
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add rss.xml
+          git add newsfeed.xml
           git commit -m "Sync RSS from OneDrive"
           git push
