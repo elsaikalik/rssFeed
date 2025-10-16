@@ -23,5 +23,5 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add rss.xml
-          git commit -m "Update RSS from OneDrive"
-          git push
+          git diff --cached --quiet || (git commit -m "Update RSS from OneDrive" && git push)
+
