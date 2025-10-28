@@ -16,7 +16,7 @@ jobs:
 
       - name: Download RSS from OneDrive
         run: |
-          curl -L "https://086gc-my.sharepoint.com/:u:/r/personal/kevin_el-saikali_dfo-mpo_gc_ca/Documents/Attachments/rss.xml?csf=1&web=1&e=ry2aKs" -o new_rss.xml
+          curl -L "https://086gc-my.sharepoint.com/:u:/r/personal/kevin_el-saikali_dfo-mpo_gc_ca/Documents/Attachments/rss.xml?csf=1&web=1&e=dzBHya" -o new_rss.xml
 
       - name: Validate and Compare
         run: |
