@@ -21,16 +21,11 @@ jobs:
       - name: Download RSS from OneDrive
         shell: bash
         run: |
-          set -euo pipefail
-          curl -fSL \
-            "https://086gc-my.sharepoint.com/:u:/g/personal/kevin_el-saikali_dfo-mpo_gc_ca/IQAphYhttVmuSbQ7lzo8vZajAWbv2MKPeLQrqL2JeWWixX8?e=cFRLeX" \
-            -o new_rss.xml
+          curl -fSL "https://086gc-my.sharepoint.com/:u:/g/personal/kevin_el-saikali_dfo-mpo_gc_ca/IQAphYhttVmuSbQ7lzo8vZajAWbv2MKPeLQrqL2JeWWixX8?e=gmhwBd" -o new_rss.xml
 
       - name: Validate and Compare
         shell: bash
         run: |
-          set -euo pipefail
-
           # Ensure file is not empty and looks like XML (basic sanity check)
           if [ ! -s new_rss.xml ]; then
             echo "Downloaded file is empty. Skipping update."
@@ -58,7 +53,6 @@ jobs:
         if: env.no_update == 'false'
         shell: bash
         run: |
-          set -euo pipefail
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
