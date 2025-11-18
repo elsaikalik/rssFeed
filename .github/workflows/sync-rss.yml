@@ -1,0 +1,77 @@
+name: Sync RSS from OneDrive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # every 10 minutes
+  workflow_dispatch:
+
+permissions:
+  contents: write   # allow GITHUB_TOKEN to push
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo (full history, keep token)
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Download RSS from OneDrive
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fSL \
+            "https://086gc-my.sharepoint.com/:u:/g/personal/kevin_el-saikali_dfo-mpo_gc_ca/IQAphYhttVmuSbQ7lzo8vZajAWbv2MKPeLQrqL2JeWWixX8?e=cFRLeX" \
+            -o new_rss.xml
+
+      - name: Validate and Compare
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Ensure file is not empty and looks like XML (basic sanity check)
+          if [ ! -s new_rss.xml ]; then
+            echo "Downloaded file is empty. Skipping update."
+            echo "no_update=true" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          # Optional: very light check that it starts with '<'
+          if ! head -c 1 new_rss.xml | grep -q '<'; then
+            echo "Downloaded content does not look like XML. Skipping update."
+            echo "no_update=true" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          if [ -f rss.xml ] && cmp -s new_rss.xml rss.xml; then
+            echo "No changes detected. Skipping commit."
+            echo "no_update=true" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          mv -f new_rss.xml rss.xml
+          echo "no_update=false" >> $GITHUB_ENV
+
+      - name: Commit and Push (only if changed)
+        if: env.no_update == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Ensure we are on the workflow's branch and up to date
+          git fetch origin "${GITHUB_REF_NAME}"
+          git checkout -B "${GITHUB_REF_NAME}" "origin/${GITHUB_REF_NAME}" || git checkout -B "${GITHUB_REF_NAME}"
+
+          git add rss.xml
+          if git diff --cached --quiet; then
+            echo "No staged changes to commit."
+            exit 0
+          fi
+
+          git commit -m "Update RSS from OneDrive ($(date -u +'%Y-%m-%dT%H:%M:%SZ'))"
+          # Push to the same branch the workflow runs on
+          git push origin HEAD:"${GITHUB_REF_NAME}"
