@@ -18,19 +18,7 @@ jobs:
         run: |
           curl -L "https://086gc-my.sharepoint.com/:u:/g/personal/kevin_el-saikali_dfo-mpo_gc_ca/ESmFiG21Wa5JtDuXOjy9lqMBZu_Ywo94tCuovYl5ZaLFfw?e=hWIU9q" -o new_rss.xml
 
-      - name: Validate and Compare
-        run: |
-          if [ ! -s new_rss.xml ]; then
-            echo "Downloaded file is empty. Skipping update."
-            exit 0
-          fi
-
-          if [ -f rss.xml ] && cmp -s new_rss.xml rss.xml; then
-            echo "No changes detected. Skipping commit."
-            exit 0
-          fi
-
-          mv new_rss.xml rss.xml
+     
 
       - name: Commit and Push
         run: |
