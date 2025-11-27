@@ -22,7 +22,7 @@ jobs:
       - name: Download RSS from OneDrive (force direct download)
         run: |
           set -euo pipefail
-          URL="http://dfonk1awvast053:8080/newsfeed.xml"
+          URL="https://086gc-my.sharepoint.com/:f:/g/personal/kevin_el-saikali_dfo-mpo_gc_ca/ESmFiG21Wa5JtDuXOjy9lqMBZu_Ywo94tCuovYl5ZaLFfw?e=4CuGUU?download=1"
           curl -fL --retry 3 --retry-delay 2 \
             -H 'User-Agent: github-actions-curl' \
             "$URL" -o new_rss.xml
