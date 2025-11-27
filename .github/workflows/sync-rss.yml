@@ -1,41 +1,51 @@
+
 name: Sync RSS from OneDrive
 
 on:
   schedule:
-    - cron: "*/10 * * * *"   # every 10 minutes
+    - cron: "*/10 * * * *"
   workflow_dispatch:
 
 permissions:
-  contents: write   # allow GITHUB_TOKEN to push
+  contents: write
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo (full history, keep token)
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Download RSS from OneDrive
-        shell: bash
+      - name: Download RSS from OneDrive (force direct download)
         run: |
-          curl -L "https://086gc-my.sharepoint.com/:u:/g/personal/kevin_el-saikali_dfo-mpo_gc_ca/IQAphYhttVmuSbQ7lzo8vZajAWbv2MKPeLQrqL2JeWWixX8?e=gmhwBd" -o new_rss.xml
+          set -euo pipefail
+          URL="https://086gc-my.sharepoint.com/:u:/g/personal/kevin_el-saikali_dfo-mpo_gc_ca/IQAphYhttVmuSbQ7lzo8vZajAWbv2MKPeLQrqL2JeWWixX8?download=1"
+          curl -fL --retry 3 --retry-delay 2 \
+            -H 'User-Agent: github-actions-curl' \
+            "$URL" -o new_rss.xml
 
       - name: Validate and Compare
-        shell: bash
         run: |
-          # Ensure file is not empty and looks like XML (basic sanity check)
+          set -euo pipefail
           if [ ! -s new_rss.xml ]; then
             echo "Downloaded file is empty. Skipping update."
             echo "no_update=true" >> $GITHUB_ENV
             exit 0
           fi
 
-          # Optional: very light check that it starts with '<'
-          if ! head -c 1 new_rss.xml | grep -q '<'; then
-            echo "Downloaded content does not look like XML. Skipping update."
+          # Reject HTML (likely login/consent page)
+          if grep -qiE '<!DOCTYPE html|<html' new_rss.xml; then
+            echo "Downloaded HTML (not RSS). Skipping."
+            echo "no_update=true" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          # Stronger RSS/XML check
+          if ! head -n 5 new_rss.xml | grep -qiE '<\?xml|<rss|<feed'; then
+            echo "Content not recognized as RSS/XML. Skipping."
             echo "no_update=true" >> $GITHUB_ENV
             exit 0
           fi
@@ -51,21 +61,15 @@ jobs:
 
       - name: Commit and Push (only if changed)
         if: env.no_update == 'false'
-        shell: bash
         run: |
+          set -euo pipefail
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Ensure we are on the workflow's branch and up to date
-          git fetch origin "${GITHUB_REF_NAME}"
-          git checkout -B "${GITHUB_REF_NAME}" "origin/${GITHUB_REF_NAME}" || git checkout -B "${GITHUB_REF_NAME}"
-
+          # We are already on the checked-out branch; no need to re-checkout
           git add rss.xml
-          if git diff --cached --quiet; then
-            echo "No staged changes to commit."
+          git commit -m "Update RSS from OneDrive ($(date -u +'%Y-%m-%dT%H:%M:%SZ'))" || {
+            echo "Nothing to commit."
             exit 0
-          fi
-
-          git commit -m "Update RSS from OneDrive ($(date -u +'%Y-%m-%dT%H:%M:%SZ'))"
-          # Push to the same branch the workflow runs on
-          git push origin HEAD:"${GITHUB_REF_NAME}"
+          }
+          git push
