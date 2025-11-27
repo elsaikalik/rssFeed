@@ -1,6 +1,4 @@
-
 name: Sync RSS from OneDrive
-
 on:
   schedule:
     - cron: "*/10 * * * *"
@@ -13,63 +11,31 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo (full history, keep token)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: true
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Download RSS from OneDrive (force direct download)
+      - name: Download RSS from OneDrive
         run: |
-          set -euo pipefail
-          URL="https://086gc-my.sharepoint.com/:f:/g/personal/kevin_el-saikali_dfo-mpo_gc_ca/ESmFiG21Wa5JtDuXOjy9lqMBZu_Ywo94tCuovYl5ZaLFfw?e=4CuGUU&download=1"
-          curl -fL --retry 3 --retry-delay 2 \
-            -H 'User-Agent: github-actions-curl' \
-            "$URL" -o new_rss.xml
+          curl -L "https://086gc-my.sharepoint.com/:u:/r/personal/kevin_el-saikali_dfo-mpo_gc_ca/Documents/Attachments/rss.xml?csf=1&web=1&e=HIZzvA" -o new_rss.xml
 
       - name: Validate and Compare
         run: |
-          set -euo pipefail
           if [ ! -s new_rss.xml ]; then
             echo "Downloaded file is empty. Skipping update."
-            echo "no_update=true" >> $GITHUB_ENV
-            exit 0
-          fi
-
-          # Reject HTML (likely login/consent page)
-          if grep -qiE '<!DOCTYPE html|<html' new_rss.xml; then
-            echo "Downloaded HTML (not RSS). Skipping."
-            echo "no_update=true" >> $GITHUB_ENV
-            exit 0
-          fi
-
-          # Stronger RSS/XML check
-          if ! head -n 5 new_rss.xml | grep -qiE '<\?xml|<rss|<feed'; then
-            echo "Content not recognized as RSS/XML. Skipping."
-            echo "no_update=true" >> $GITHUB_ENV
             exit 0
           fi
 
           if [ -f rss.xml ] && cmp -s new_rss.xml rss.xml; then
             echo "No changes detected. Skipping commit."
-            echo "no_update=true" >> $GITHUB_ENV
             exit 0
           fi
 
-          mv -f new_rss.xml rss.xml
-          echo "no_update=false" >> $GITHUB_ENV
+          mv new_rss.xml rss.xml
 
-      - name: Commit and Push (only if changed)
-        if: env.no_update == 'false'
+      - name: Commit and Push
         run: |
-          set -euo pipefail
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # We are already on the checked-out branch; no need to re-checkout
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
           git add rss.xml
-          git commit -m "Update RSS from OneDrive ($(date -u +'%Y-%m-%dT%H:%M:%SZ'))" || {
-            echo "Nothing to commit."
-            exit 0
-          }
+          git commit -m "Update RSS from OneDrive" || echo "No changes to commit"
           git push
